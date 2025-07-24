@@ -1,10 +1,10 @@
 name: OCI Token Exchange via GitHub OIDC
 
 on:
-  workflow_dispatch:  # executa manualmente
+  workflow_dispatch:  # para executar manualmente
 
 permissions:
-  id-token: write     # necessário para emitir o OIDC token
+  id-token: write     # para emitir token OIDC do GitHub
   contents: read
 
 jobs:
@@ -32,29 +32,8 @@ jobs:
 
       - name: Fazer Token Exchange na OCI para obter UPST
         id: upst
-        run: |
-          echo "Trocando token via Identity Domain da OCI..."
+        env:
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}          # Coloque seu Client ID aqui no GitHub Secrets
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}  # E o Client Secret aqui
+          ID_T_
 
-          TOKEN_RESPONSE=$(curl -s -X POST \
-            "https://idcs-c3fbb3ae829b4af0a98995e5f1549f09.identity.oraclecloud.com/oauth2/v1/token" \
-            -H "Content-Type: application/x-www-form-urlencoded;charset=utf-8" \
-            --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
-            --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:jwt" \
-            --data-urlencode "requested_token_type=urn:opc:token-type:upst" \
-            --data-urlencode "subject_token=$ID_TOKEN")
-
-          echo "Resposta do Token Exchange:"
-          echo "$TOKEN_RESPONSE" | jq
-
-          ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
-
-          echo "::add-mask::$ACCESS_TOKEN"
-          echo "UPST=$ACCESS_TOKEN" >> $GITHUB_ENV
-
-      - name: Testar chamada na API OCI com o UPST
-        run: |
-          echo "Chamando API da OCI com o UPST..."
-          curl -s -X GET \
-            -H "Authorization: Bearer $UPST" \
-            -H "Content-Type: application/json" \
-            "https://identity.us-ashburn-1.oraclecloud.com/20160918/users/" | jq
