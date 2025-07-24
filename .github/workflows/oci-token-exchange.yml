@@ -1,10 +1,10 @@
 name: OCI Token Exchange via GitHub OIDC
 
 on:
-  workflow_dispatch:  # você pode disparar manualmente no GitHub
+  workflow_dispatch:  # executa manualmente
 
 permissions:
-  id-token: write     # necessário para gerar o OIDC token
+  id-token: write     # necessário para emitir o OIDC token
   contents: read
 
 jobs:
@@ -21,24 +21,27 @@ jobs:
           echo "Solicitando token OIDC..."
           TOKEN_JSON=$(curl -sSL "$ACTIONS_ID_TOKEN_REQUEST_URL" \
             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN")
-          ID_TOKEN=$(echo "$TOKEN_JSON" | jq -r .value)
 
+          ID_TOKEN=$(echo "$TOKEN_JSON" | jq -r .value)
           echo "::add-mask::$ID_TOKEN"
           echo "ID_TOKEN=$ID_TOKEN" >> $GITHUB_ENV
+
+          echo "Decodificando o payload do ID Token:"
+          PAYLOAD=$(echo "$ID_TOKEN" | cut -d '.' -f2 | tr '_-' '/+' | base64 -d 2>/dev/null || echo "INVALID_PAYLOAD")
+          echo "$PAYLOAD" | jq || echo "Payload inválido ou malformado"
 
       - name: Fazer Token Exchange na OCI para obter UPST
         id: upst
         run: |
           echo "Trocando token via Identity Domain da OCI..."
-          
+
           TOKEN_RESPONSE=$(curl -s -X POST \
             "https://idcs-c3fbb3ae829b4af0a98995e5f1549f09.identity.oraclecloud.com/oauth2/v1/token" \
             -H "Content-Type: application/x-www-form-urlencoded;charset=utf-8" \
             --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
             --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:jwt" \
             --data-urlencode "requested_token_type=urn:opc:token-type:upst" \
-            --data-urlencode "subject_token=$ID_TOKEN" \
-            --data-urlencode "scope=urn:opc:idm:__myscopes__")
+            --data-urlencode "subject_token=$ID_TOKEN")
 
           echo "Resposta do Token Exchange:"
           echo "$TOKEN_RESPONSE" | jq
@@ -48,7 +51,7 @@ jobs:
           echo "::add-mask::$ACCESS_TOKEN"
           echo "UPST=$ACCESS_TOKEN" >> $GITHUB_ENV
 
-      - name: Testar chamada na API OCI com UPST
+      - name: Testar chamada na API OCI com o UPST
         run: |
           echo "Chamando API da OCI com o UPST..."
           curl -s -X GET \
