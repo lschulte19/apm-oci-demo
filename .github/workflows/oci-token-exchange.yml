@@ -1,10 +1,10 @@
 name: OCI Token Exchange via GitHub OIDC
 
 on:
-  workflow_dispatch:  # para executar manualmente
+  workflow_dispatch:
 
 permissions:
-  id-token: write     # para emitir token OIDC do GitHub
+  id-token: write
   contents: read
 
 jobs:
@@ -19,43 +19,36 @@ jobs:
         id: oidc
         run: |
           echo "Solicitando token OIDC..."
+
           TOKEN_JSON=$(curl -sSL "$ACTIONS_ID_TOKEN_REQUEST_URL" \
             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN")
 
           ID_TOKEN=$(echo "$TOKEN_JSON" | jq -r .value)
+
           echo "::add-mask::$ID_TOKEN"
           echo "ID_TOKEN=$ID_TOKEN" >> $GITHUB_ENV
 
-          # Opcional: só imprime o token, sem decodificar payload (para evitar erro)
           echo "Token JWT OIDC recebido com sucesso."
 
-      - name: Fazer Token Exchange na OCI para obter UPST
+      - name: Trocar por UPST na OCI
         id: upst
-        env:
-          CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-          ID_TOKEN: ${{ env.ID_TOKEN }}
         run: |
           echo "Trocando token via Identity Domain da OCI..."
 
-          AUTH_HEADER=$(echo -n "$CLIENT_ID:$CLIENT_SECRET" | base64)
-
           TOKEN_RESPONSE=$(curl -s -X POST \
             "https://idcs-c3fbb3ae829b4af0a98995e5f1549f09.identity.oraclecloud.com/oauth2/v1/token" \
-            -H "Content-Type: application/x-www-form-urlencoded;charset=utf-8" \
-            -H "Authorization: Basic $AUTH_HEADER" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
             --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
-            --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:jwt" \
             --data-urlencode "requested_token_type=urn:opc:token-type:upst" \
-            --data-urlencode "subject_token=$ID_TOKEN" \
-            --data-urlencode "scope=urn:opc:idm:__myscopes__")
+            --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:jwt" \
+            --data-urlencode "subject_token=$ID_TOKEN")
 
           echo "Resposta do Token Exchange:"
           echo "$TOKEN_RESPONSE" | jq
 
           ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
 
-          if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
+          if [[ "$ACCESS_TOKEN" == "null" || -z "$ACCESS_TOKEN" ]]; then
             echo "Falha ao obter o token UPST"
             exit 1
           fi
