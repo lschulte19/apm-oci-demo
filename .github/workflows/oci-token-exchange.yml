@@ -26,15 +26,14 @@ jobs:
           echo "::add-mask::$ID_TOKEN"
           echo "ID_TOKEN=$ID_TOKEN" >> $GITHUB_ENV
 
-          echo "Decodificando o payload do ID Token:"
-          PAYLOAD=$(echo "$ID_TOKEN" | cut -d '.' -f2 | tr '_-' '/+' | base64 -d 2>/dev/null || echo "INVALID_PAYLOAD")
-          echo "$PAYLOAD" | jq || echo "Payload inválido ou malformado"
+          # Opcional: só imprime o token, sem decodificar payload (para evitar erro)
+          echo "Token JWT OIDC recebido com sucesso."
 
       - name: Fazer Token Exchange na OCI para obter UPST
         id: upst
         env:
-          CLIENT_ID: ${{ secrets.CLIENT_ID }}          # Coloque seu Client ID aqui no GitHub Secrets
-          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}  # E o Client Secret aqui
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
           ID_TOKEN: ${{ env.ID_TOKEN }}
         run: |
           echo "Trocando token via Identity Domain da OCI..."
@@ -48,7 +47,8 @@ jobs:
             --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
             --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:jwt" \
             --data-urlencode "requested_token_type=urn:opc:token-type:upst" \
-            --data-urlencode "subject_token=$ID_TOKEN")
+            --data-urlencode "subject_token=$ID_TOKEN" \
+            --data-urlencode "scope=urn:opc:idm:__myscopes__")
 
           echo "Resposta do Token Exchange:"
           echo "$TOKEN_RESPONSE" | jq
