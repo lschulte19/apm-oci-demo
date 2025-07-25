@@ -1,0 +1,14 @@
+{
+    "active": true,
+    "allowImpersonation": true,
+    "issuer": "my-jwt-issuer",
+    "name": "JWT to UPST Trust",
+    "oauthClients": ["ocid1.oauth2client.oc1..aaaaaaaaxxxxyyyyzzz"],
+    "publicCertificate": "-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxeuZD1KkNh2ADC0H4VqI\\n6aQNBLy6WG5CEXPXjtZ6adGeQTmin1Rw4t8LBDYPuOX5I8eQss9RjBJjDxNyHDjm\\npMXdlZalPA5SOusFQ7qRpoIMAJqFCsUOZ8UfTFMwnYIcJpXaTQEK4g09Mh5AYKFo\\nU2ELqZD6/fbG+wPA9y0jly8MADvGCa+SQ/8mobT42Rgzwdkxzn8azSg8kgSxS/iK\\nt1TZCu/2PxNwbuw5uAUeO81+GQTwr15jWqtLqwjF4VHcldCqTDkyrYqNP1gjVZUD\\nJf4Uq8Pmq75Xh5EucCsD2kwXpmRfs7yiAwllirleNmSySNHO/h6zPKC/cxMfYbsD\\n/wIDAQAB\\n-----END PUBLIC KEY-----\\n",
+    "clientClaimName": "client_id",
+    "clientClaimValues": ["ocid1.oauth2client.oc1..aaaaaaaaxxxxyyyyzzz"],
+    "subjectType": "User",
+    "type": "JWT",
+    "schemas": ["urn:ietf:params:scim:schemas:oracle:idcs:IdentityPropagationTrust"]
+  }
+  
