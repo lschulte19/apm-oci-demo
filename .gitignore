@@ -1,0 +1,8 @@
+# Ignora todos os arquivos .pem
+*.pem
+
+# Caso você use um diretório específico para chaves
+keys/
+*.key
+*.crt
+
