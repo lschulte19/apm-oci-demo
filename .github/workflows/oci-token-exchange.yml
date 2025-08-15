@@ -1,24 +1,18 @@
 name: OCI Token Exchange Workflow
 
 on:
-  workflow_dispatch:  # Permite rodar manualmente
+  workflow_dispatch:
   push:
     branches:
       - main
 
-env:
-  DOMAIN_BASE_URL: ${{ vars.DOMAIN_BASE_URL }}   # ex.: https://idcs-xxxx.identity.oraclecloud.com
-  OCI_TENANCY: ${{ vars.OCI_TENANCY }}
-  OCI_REGION: ${{ vars.OCI_REGION }}
-  OIDC_CLIENT_ID: ${{ secrets.OIDC_CLIENT_ID }}
-  OIDC_CLIENT_SECRET: ${{ secrets.OIDC_CLIENT_SECRET }}
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   oci-token-exchange:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
 
     steps:
       - name: Checkout repository
@@ -28,11 +22,10 @@ jobs:
         id: oci_token_exchange
         uses: gtrevorrow/oci-token-exchange-action@v1
         with:
-          oidc_client_identifier: ${{ env.OIDC_CLIENT_ID }}
-          oidc_client_secret: ${{ env.OIDC_CLIENT_SECRET }}
-          domain_base_url: ${{ env.DOMAIN_BASE_URL }}
-          oci_tenancy: ${{ env.OCI_TENANCY }}
-          oci_region: ${{ env.OCI_REGION }}
+          oidc_client_identifier: ${{ secrets.OIDC_CLIENT_ID }}
+          domain_base_url: ${{ vars.DOMAIN_BASE_URL }}
+          oci_tenancy: ${{ vars.OCI_TENANCY }}
+          oci_region: ${{ vars.OCI_REGION }}
 
       - name: Show OCI Token
         run: |
