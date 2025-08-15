@@ -2,9 +2,6 @@ name: OCI Token Exchange Workflow
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 permissions:
   id-token: write
@@ -21,18 +18,18 @@ jobs:
       - name: Debug inputs
         run: |
           echo "OIDC_CLIENT_ID = ${{ secrets.OIDC_CLIENT_ID }}"
-          echo "DOMAIN_BASE_URL = ${{ vars.DOMAIN_BASE_URL }}"
-          echo "OCI_TENANCY = ${{ vars.OCI_TENANCY }}"
-          echo "OCI_REGION = ${{ vars.OCI_REGION }}"
+          echo "DOMAIN_BASE_URL = ${{ github.variables.DOMAIN_BASE_URL }}"
+          echo "OCI_TENANCY = ${{ github.variables.OCI_TENANCY }}"
+          echo "OCI_REGION = ${{ github.variables.OCI_REGION }}"
 
       - name: Exchange OIDC JWT for OCI Token
         id: oci_token_exchange
         uses: gtrevorrow/oci-token-exchange-action@v1
         with:
           oidc_client_identifier: ${{ secrets.OIDC_CLIENT_ID }}
-          domain_base_url: ${{ vars.DOMAIN_BASE_URL }}
-          oci_tenancy: ${{ vars.OCI_TENANCY }}
-          oci_region: ${{ vars.OCI_REGION }}
+          domain_base_url: ${{ github.variables.DOMAIN_BASE_URL }}
+          oci_tenancy: ${{ github.variables.OCI_TENANCY }}
+          oci_region: ${{ github.variables.OCI_REGION }}
 
       - name: Show OCI Token
         run: |
