@@ -18,6 +18,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Debug inputs
+        run: |
+          echo "OIDC_CLIENT_ID = ${{ secrets.OIDC_CLIENT_ID }}"
+          echo "DOMAIN_BASE_URL = ${{ vars.DOMAIN_BASE_URL }}"
+          echo "OCI_TENANCY = ${{ vars.OCI_TENANCY }}"
+          echo "OCI_REGION = ${{ vars.OCI_REGION }}"
+
       - name: Exchange OIDC JWT for OCI Token
         id: oci_token_exchange
         uses: gtrevorrow/oci-token-exchange-action@v1
@@ -31,5 +38,6 @@ jobs:
         run: |
           echo "OCI Access Token:"
           echo "${{ steps.oci_token_exchange.outputs.oci_access_token }}"
+
 
 
