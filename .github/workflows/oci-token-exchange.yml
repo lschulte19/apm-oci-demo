@@ -1,75 +1,37 @@
-name: OCI Token Exchange (Manual curl)
+name: OCI Token Exchange (GitHub OIDC → UPST)
 
 on:
-  workflow_dispatch:
+  push:
 
 permissions:
-  id-token: write
+  id-token: write   # GitHub precisa disso pra emitir o OIDC JWT
   contents: read
 
-env:
-  DOMAIN_BASE_URL: ${{ vars.DOMAIN_BASE_URL }}   # ex.: https://idcs-xxxx.identity.oraclecloud.com
-  OCI_TENANCY: ${{ vars.OCI_TENANCY }}
-  OCI_REGION:  ${{ vars.OCI_REGION }}
-  OIDC_CLIENT_ID: ${{ secrets.OIDC_CLIENT_ID }}
-  OIDC_CLIENT_SECRET: ${{ secrets.OIDC_CLIENT_SECRET }}
-
 jobs:
-  manual-exchange:
+  exchange-and-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Install jq + OCI CLI
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install OCI CLI
         run: |
-          sudo apt-get update && sudo apt-get install -y jq
           curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh \
             | bash -s -- --accept-all-defaults
           echo "$HOME/bin" >> $GITHUB_PATH
 
-      - name: Get GitHub OIDC token (audience = your domain)
-        id: gh-oidc
-        run: |
-          # GitHub expõe duas envs mágicas para pegar o token:
-          # ACTIONS_ID_TOKEN_REQUEST_URL e ACTIONS_ID_TOKEN_REQUEST_TOKEN
-          AUD="${DOMAIN_BASE_URL}"  # usar o domínio como audience
-          OIDC_JWT=$(curl -sSL -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${AUD}" | jq -r '.value')
-          echo "oidc_jwt=${OIDC_JWT}" >> $GITHUB_OUTPUT
+      - name: Exchange GitHub OIDC → OCI UPST
+        uses: gtrevorrow/oci-token-exchange-action@v1
+        with:
+          oidc_client_identifier: ${{ secrets.OIDC_CLIENT_IDENTIFIER }}   # "client_id:client_secret"
+          domain_base_url: ${{ vars.DOMAIN_BASE_URL }}
+          oci_tenancy: ${{ vars.OCI_TENANCY }}
+          oci_region: ${{ vars.OCI_REGION }}
+          oci_profile: DEFAULT
+          # debug: true
 
-      - name: Exchange OIDC → UPST
-        id: exchange
-        run: |
-          BASIC_AUTH=$(printf "%s:%s" "$OIDC_CLIENT_ID" "$OIDC_CLIENT_SECRET" | base64 -w0)
-          TOKEN_JSON=$(curl -sS -X POST "${DOMAIN_BASE_URL}/oauth2/v1/token" \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -H "Authorization: Basic ${BASIC_AUTH}" \
-            --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
-            --data-urlencode "requested_token_type=urn:oci:token-type:oci-upst" \
-            --data-urlencode "subject_token=${{ steps.gh-oidc.outputs.oidc_jwt }}" \
-            --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:jwt" \
-            --data-urlencode "issuer=https://token.actions.githubusercontent.com")
-
-          echo "$TOKEN_JSON" | jq .
-          UPST=$(echo "$TOKEN_JSON" | jq -r '.token')
-          if [ -z "$UPST" ] || [ "$UPST" = "null" ]; then
-            echo "UPST não retornado"; exit 1
-          fi
-
-          # Salva o token no formato esperado pelo OCI CLI
-          mkdir -p "$HOME/.oci"
-          echo "$UPST" > "$HOME/.oci/oci_api_key.pem.upst"
-          chmod 600 "$HOME/.oci/oci_api_key.pem.upst"
-          echo "upst_file=$HOME/.oci/oci_api_key.pem.upst" >> $GITHUB_OUTPUT
-
-      - name: Configure OCI CLI profile p/ security_token
-        run: |
-          cat > "$HOME/.oci/config" <<EOF
-[DEFAULT]
-tenancy=${OCI_TENANCY}
-region=${OCI_REGION}
-security_token_file=${{ steps.exchange.outputs.upst_file }}
-EOF
-
-      - name: Test: get Object Storage namespace
+      - name: Sanity check - get namespace
         run: |
           oci --auth security_token --profile DEFAULT os ns get
+
 
